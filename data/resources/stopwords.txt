@@ -337,4 +337,5 @@
 "olarak",
 "bir",
 "her",
-"şey"
+"şey",
+"benim",

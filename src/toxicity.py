@@ -1,6 +1,6 @@
 import pandas as pd
 from transformers import pipeline
-from tqdm import tqdm
+from stqdm import stqdm
 from src.config import TOXICITY_MODEL, SENTIMENTS, TOXICITY
 
 model_name = TOXICITY_MODEL
@@ -48,7 +48,7 @@ def toxicity_analysis():
 
     yield("Analyzing Toxicity (Skipping Positive comments)...")
 
-    # tqdm.pandas()
+    stqdm.pandas()
     results = df.progress_apply(check_toxicity, axis=1)
 
     df['toxicity_label'] = [res[0] for res in results]

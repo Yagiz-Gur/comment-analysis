@@ -38,7 +38,7 @@ def init_page():
     st.title("🎥 YouTube Yorum Analiz Paneli")
     st.markdown("---")
 
-#SIDEBA
+#SIDEBAr
 def render_sidebar():
     """Yan paneli oluşturur ve girilen URL'yi döndürür."""
     with st.sidebar:
@@ -89,38 +89,101 @@ def tab_analysis():
         st.warning("⚠️ Lütfen önce 1. Sekmeden yorumları indirin.")
         return
 
-    col_sent, col_tox = st.columns(2)
+    st.markdown("## Duygu ve Toxicity analizi")
+    st.write("Sentiment Analysis, bir metnin olumlu, olumsuz veya nötr duygu taşıyıp taşımadığını belirleyen bir" \
+    " yapay zekâ analizidir. Toxicity Analysis ise metindeki hakaret, küfür, tehdit veya aşağılayıcı ifadeleri" \
+    " tespit ederek zararlı içeriği ortaya çıkarır. Bu iki analiz birlikte, kullanıcıların daha güvenli ve" \
+    " anlamlı bir iletişim deneyimi yaşamasını sağlar.")
+
+    if st.button("Analizi Başlat"):
+        try:
+            for message in sentiment_analysis():
+                st.write(message)
+            st.info("Sentiment analysis tamamlandı")
+        except FileNotFoundError:
+            st.error("Dosya bulunamadı !")
+        try:
+            for message in toxicity_analysis():
+                st.write(message)
+            st.info("Toxicity analysis tamamlandı")
+        except:
+            st.info("Hata oluştu")
+        
+        show_metrics()
+
+def show_metrics():
+    # 1. Load the Data
+    try:
+        # Make sure this matches your actual file name
+        df = pd.read_csv("data/processed/toxicity.csv") 
+    except FileNotFoundError:
+        st.error("Error: 'Toxicity.csv' not found. Please run the analysis first.")
+        return
+
+    # 2. Basic Calculations
+    total_comments = len(df)
     
-    with col_sent:
-        st.markdown("### 1. Duygu Analizi (Sentiment)")
-        if st.button("Duygu Analizini Başlat"):
-            try:
-                with st.status("Sentiment Modeli Çalışıyor...", expanded=True) as status:
-                    for message in sentiment_analysis():
-                        st.write(message)
-                    status.update(label="Duygu Analizi Bitti!", state="complete", expanded=False)
-                st.success("Duygu analizi tamamlandı.")
-            except FileNotFoundError:
-                st.error("Dosya bulunamadı!")
+    # Calculate Sentiment Counts (Safe method using .get to avoid errors if a label is missing)
+    sentiment_counts = df['sentiment'].value_counts()
+    negative_count = sentiment_counts.get('Negative', 0)
+    positive_count = sentiment_counts.get('Positive', 0)
+    neutral_count = sentiment_counts.get('Neutral', 0)
+    
+    # Calculate Sentiment Percentage
+    neg_percentage = (negative_count / total_comments) * 100 if total_comments > 0 else 0
 
-    with col_tox:
-        st.markdown("### 2. Toksisite Analizi (Toxicity)")
-        if st.button("Toksisite Analizini Başlat"):
-            with st.status("Toksisite Modeli Çalışıyor...", expanded=True) as status:
-                for message in toxicity_analysis():
-                    st.write(message)
-                status.update(label="Toksisite Analizi Bitti!", state="complete", expanded=False)
-            st.success("Toksisite analizi tamamlandı.")
-            st.session_state.analysis_done = True
+    # Calculate Toxicity Counts
+    # Assuming the column is named 'toxicity_label' and the bad label is 'Toxic'
+    toxicity_counts = df['toxicity_label'].value_counts()
+    toxic_count = toxicity_counts.get('Toxic', 0) # Change 'Toxic' to whatever your label is (e.g., 'severe_toxicity')
+    
+    # Calculate Toxicity Percentage
+    toxic_percentage = (toxic_count / total_comments) * 100 if total_comments > 0 else 0
 
+    # 3. Display in Streamlit
+    st.header("📊 Analysis Overview")
+    
+    # Row 1: Big Summary Metrics
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric(label="Total Comments", value=total_comments)
+    
+    with col2:
+        st.metric(
+            label="Negative Comments", 
+            value=f"{negative_count}", 
+            delta=f"{neg_percentage:.1f}% of total",
+            delta_color="inverse" # Makes red color for negative things
+        )
+        
+    with col3:
+        st.metric(
+            label="Toxic Comments", 
+            value=f"{toxic_count}", 
+            delta=f"{toxic_percentage:.1f}% of total",
+            delta_color="inverse"
+        )
 
-def tab_visualization():
-    """Grafik sekmesinin içeriği."""
+    # Row 2: Detailed Breakdown (Optional but nice)
+    st.subheader("Detailed Breakdown")
+    col4, col5 = st.columns(2)
+    
+    with col4:
+        st.write("**Sentiment Distribution**")
+        st.dataframe(sentiment_counts, width="stretch")
+        # Or use a chart: st.bar_chart(sentiment_counts)
+        
+    with col5:
+        st.write("**Toxicity Distribution**")
+        st.dataframe(toxicity_counts, width="stretch")
+        # Or use a chart: st.bar_chart(toxicity_counts)   
+
+def tab_visualization():    
+
     if st.button("📊 Grafikleri Oluştur / Yenile"):
-        if not st.session_state.analysis_done:
-            st.warning("Grafik oluşturmak için önce analizleri tamamlamalısınız.")
-        else:
-            with st.spinner('Grafikler çiziliyor...'):
+        with st.spinner('Grafikler çiziliyor...'):
+            try:
                 visulize_sentiment()
                 visulize_toxicity()
                 
@@ -155,7 +218,8 @@ def tab_visualization():
                     st.image(SENTIMENT_BARCHART, width="stretch")
                 with s_col2:
                     st.image(SENTIMENT_SCATTER, width="stretch")
-
+            except FileNotFoundError:
+                st.error("Dosyo bulunamadı!")
 
 def comments():
     st.header("Ham Veri İnceleme")

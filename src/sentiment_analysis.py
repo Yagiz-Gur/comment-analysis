@@ -1,6 +1,6 @@
 import pandas as pd
 from transformers import pipeline
-from tqdm import tqdm
+from stqdm import stqdm
 from src.config import SENTIMENT_MODEL, COMMENTS, SENTIMENTS
 
 
@@ -32,7 +32,7 @@ def sentiment_analysis():
         exit()
     
     yield("Analyzing sentiments...")
-    # tqdm.pandas()
+    stqdm.pandas()
     df[['sentiment', 'score']] = df["Text"].progress_apply(lambda x: pd.Series(get_sentiment(x)))
 
     df.to_csv(SENTIMENTS, index=False)
